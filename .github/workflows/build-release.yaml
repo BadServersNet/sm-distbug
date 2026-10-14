@@ -59,6 +59,10 @@ jobs:
           mkdir -p build/addons/sourcemod/plugins
           spcomp -E -iinclude "${PLUGIN_FILE}" -o "build/addons/sourcemod/plugins/${PLUGIN_NAME}.smx"
 
+      - name: Compile test listener
+        run: |
+          spcomp -E -iinclude test/distbugfix_listener.sp -o "${RUNNER_TEMP}/distbugfix_listener.smx"
+
       - name: Package source
         run: |
           mkdir -p build/addons/sourcemod/scripting/include

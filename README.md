@@ -37,6 +37,8 @@ Distbug registers the library `distbugfix` and calls one forward, declared in `i
 forward void Distbug_OnJumpLanded(int client, DistbugJump jump, DistbugStrafes strafes);
 ```
 
+That file is the whole public API. The plugin's own definitions are in `distbugfix/internal.inc`, which other plugins shouldn't include.
+
 It is called once for each jump that Distbug prints as landed, after the output has been sent. `DistbugJump` holds the three console lines and `DistbugStrafes` holds the strafe table. The values aren't rounded, and the include gives the console format of each one. A stat that Distbug left out of its output, such as an edge of 32 or more, arrives with its `Shown` flag set to false.
 
 The forward is not called for:
