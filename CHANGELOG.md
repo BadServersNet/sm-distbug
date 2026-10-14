@@ -5,6 +5,7 @@
 
 - Added the `Distbug_OnJumpLanded` forward, which gives other plugins a landed jump's stats and strafe table as they are printed to the console.
 - Registered the plugin library as `distbugfix`.
+- Fixed a jump printing a short airtime and a wrong sync when `sm_distbug` was toggled during it. A jump in progress when Distbug is toggled is no longer printed.
 - Console, chat, HUD and beam output is unchanged.
 
 **v2.0.0 Changelog**
