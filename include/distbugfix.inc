@@ -4,7 +4,7 @@
 #endif
 #define _distbug_included
 
-#define DISTBUG_VERSION "2.1.0"
+#define DISTBUG_VERSION "2.2.0"
 
 // library name, for LibraryExists and OnLibraryAdded
 #define DISTBUG_LIBRARY "distbugfix"

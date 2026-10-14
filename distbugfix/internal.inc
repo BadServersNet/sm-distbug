@@ -17,6 +17,11 @@
 
 #define MAX_COOKIE_SIZE 32
 
+// rounded stats go through the 5 decimals gokz stores distbug stats at, so they print what it stores
+#define ROUNDED_STAT_DECIMALS  5
+#define ROUNDED_STAT_PRECISION 100000
+#define ROUNDED_STAT_LIMIT     20000.0
+
 enum
 {
 	SETTINGS_DISTBUG_ENABLED      = (1 << 0),
@@ -238,4 +243,84 @@ stock void ShowPanel(int client, int duration, const char[] message)
 		show_survival_respawn_status.FireToClient(client);
 		show_survival_respawn_status.Cancel();
 	}
+}
+
+// a stat ScaleStat can take: finite, and within an int once scaled
+stock bool IsStatRoundable(float value)
+{
+	return (view_as<int>(value) & 0x7F800000) != 0x7F800000 && FloatAbs(value) <= ROUNDED_STAT_LIMIT;
+}
+
+// ScaleStat and FormatScaledStat are GOKZ_DB_ScaleJSValue and GOKZ_DB_FormatJSValue from
+// BadServersNet/gokz commit b8711fa9 (addons/sourcemod/scripting/include/gokz/localdb.inc), renamed
+
+/**
+ * Scales a jump stat to an integer with the given decimals, rounded half away
+ * from zero: 276.259 at 2 decimals is 27626, -0.15625 at 4 is -1563. This is
+ * the value GOKZ stores. It rounds from the digits SourceMod prints at
+ * one more decimal, which is exact where value * 10^decimals in a 32-bit float
+ * is not.
+ *
+ * @param value			Stat to scale. Not NaN or infinite, and at most
+ *						2147483646 once scaled.
+ * @param decimals		Decimals to keep.
+ * @return				Scaled and rounded stat.
+ */
+stock int ScaleStat(float value, int decimals)
+{
+	char format[8], digits[32];
+	FormatEx(format, sizeof(format), "%%.%df", decimals + 1);
+	int length = FormatEx(digits, sizeof(digits), format, value);
+	// The extra digit only decides the rounding, so the rest fits an int.
+	// x87 builds of SourceMod print an exact tie such as 1.125 one digit low;
+	// a value is one when value * 2^(decimals + 1) is an odd integer.
+	float twos = value * float(1 << (decimals + 1));
+	int wholeTwos = RoundToFloor(twos);
+	bool roundAway = digits[length - 1] >= '5' || (twos == float(wholeTwos) && (wholeTwos & 1) == 1);
+	digits[length - 1] = '\0';
+	ReplaceString(digits, sizeof(digits), ".", "");
+	int scaled = StringToInt(digits);
+	if (!roundAway)
+	{
+		return scaled;
+	}
+	return digits[0] == '-' ? scaled - 1 : scaled + 1;
+}
+
+/**
+ * Formats a scaled jump stat at the given decimals, rounded half away from
+ * zero: 8350 at precision 100 is "84" at 0 decimals. Showing stored stats
+ * through this, never through a float, keeps every place in agreement.
+ *
+ * @param value			Scaled stat, e.g. from ScaleStat.
+ * @param precision		Power of ten it is scaled by, e.g. ROUNDED_STAT_PRECISION.
+ * @param decimals		Decimals to show, at most the scale's.
+ * @return				Formatted stat, e.g. "262.4168".
+ */
+stock char[] FormatScaledStat(int value, int precision, int decimals)
+{
+	char formatted[16], digits[12];
+	int shown = 1;
+	for (int i = 0; i < decimals; i++)
+	{
+		shown *= 10;
+	}
+	int divisor = precision / shown;
+	int whole = value / precision;
+	int rest = value % precision;
+	int fraction = ((rest < 0 ? -rest : rest) + divisor / 2) / divisor;
+	if (fraction == shown)
+	{
+		whole += value < 0 ? -1 : 1;
+		fraction = 0;
+	}
+	if (decimals == 0)
+	{
+		IntToString(whole, formatted, sizeof(formatted));
+		return formatted;
+	}
+	// A leading 1 keeps the fraction's leading zeros: 5 hundredths is "105"
+	IntToString(shown + fraction, digits, sizeof(digits));
+	FormatEx(formatted, sizeof(formatted), "%s%d.%s", value < 0 && whole == 0 && fraction != 0 ? "-" : "", whole, digits[1]);
+	return formatted;
 }
