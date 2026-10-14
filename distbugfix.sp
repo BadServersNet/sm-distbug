@@ -19,8 +19,8 @@
 #endif
 
 #include <gamechaos>
-#define DISTBUG_INTERNAL
 #include <distbugfix>
+#include "distbugfix/internal.inc"
 
 enum struct JumpStatLabels
 {
