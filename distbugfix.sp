@@ -19,6 +19,7 @@
 #endif
 
 #include <gamechaos>
+#define DISTBUG_INTERNAL
 #include <distbugfix>
 
 enum struct JumpStatLabels
@@ -112,6 +113,7 @@ stock int g_jumpDirRightButton[JumpDir] = {
 };
 
 bool g_lateLoad;
+GlobalForward g_onJumpLanded;
 
 PlayerData g_pd[MAXPLAYERS + 1];
 PlayerData g_failstatPD[MAXPLAYERS + 1];
@@ -137,6 +139,9 @@ public Plugin myinfo =
 public APLRes AskPluginLoad2(Handle myself, bool late, char[] error, int err_max)
 {
 	g_lateLoad = late;
+	
+	RegPluginLibrary(DISTBUG_LIBRARY);
+	g_onJumpLanded = new GlobalForward("Distbug_OnJumpLanded", ET_Ignore, Param_Cell, Param_Array, Param_Array);
 	
 	return APLRes_Success;
 }
@@ -334,6 +339,9 @@ public Action OnPlayerRunCmd(int client, int& buttons, int& impulse, float vel[3
 	{
 		return Plugin_Continue;
 	}
+	
+	// PlayerPostThink runs later in this same usercmd, so a landing always reads this command's tick
+	g_pd[client].cmdTickCount = tickcount;
 	
 	if (!IsSettingEnabled(client, SETTINGS_DISTBUG_ENABLED))
 	{
@@ -1034,6 +1042,7 @@ void OnPlayerLanded(int client, PlayerData pd, PlayerData failstatPD)
 		FinishTrackingJump(client, pd);
 		
 		PrintStats(client, pd);
+		CallOnJumpLanded(client, pd);
 	}
 	else
 	{
@@ -1283,7 +1292,7 @@ void FormatForwardRelease(int release, char[] output, int length)
 	{
 		FormatEx(output, length, "Fwd: {gr}0");
 	}
-	else if (GCIntAbs(release) > 16)
+	else if (!IsForwardReleaseShown(release))
 	{
 		FormatEx(output, length, "Fwd: {dr}No");
 	}
@@ -1296,6 +1305,78 @@ void FormatForwardRelease(int release, char[] output, int length)
 		FormatEx(output, length, "Fwd: {sb}%i", release);
 	}
 
+}
+
+bool IsForwardReleaseShown(int release)
+{
+	return GCIntAbs(release) <= DISTBUG_MAX_FWD_RELEASE;
+}
+
+void CallOnJumpLanded(int client, PlayerData pd)
+{
+	if (!g_onJumpLanded.FunctionCount)
+	{
+		return;
+	}
+	
+	// the shown flags come from the labels, so they can't differ from what was printed
+	JumpStatLabels labels;
+	BuildJumpStatLabels(pd, labels);
+	
+	DistbugJump jump;
+	jump.cmdTick = pd.cmdTickCount;
+	jump.serverTick = GetGameTickCount();
+	jump.jumpType = pd.jumpType;
+	jump.jumpDir = pd.jumpDir;
+	jump.distance = pd.jumpDistance;
+	jump.blockShown = labels.hasBlock;
+	jump.block = labels.hasBlock ? pd.jumpBlockDist : 0.0;
+	jump.edgeShown = labels.hasEdge;
+	jump.edge = labels.hasEdge ? pd.jumpEdge : 0.0;
+	jump.landEdgeShown = labels.hasLandEdge;
+	jump.landEdge = labels.hasLandEdge ? pd.jumpLandEdge : 0.0;
+	jump.veer = pd.jumpVeer;
+	jump.airpath = pd.jumpAirpath;
+	jump.height = pd.jumpHeight;
+	jump.jumpoffAngle = pd.jumpJumpoffAngle;
+	jump.fwdReleaseShown = IsForwardReleaseShown(pd.jumpFwdRelease);
+	jump.fwdRelease = pd.jumpFwdRelease;
+	jump.sync = pd.jumpSync;
+	jump.prespeed = pd.jumpPrespeed;
+	jump.maxspeed = pd.jumpMaxspeed;
+	jump.overlap = pd.jumpOverlap;
+	jump.deadair = pd.jumpDeadair;
+	jump.airtime = pd.jumpAirtime;
+	jump.strafes = pd.strafeCount + 1;
+	jump.fogShown = labels.hasFOG;
+	jump.fog = labels.hasFOG ? pd.prespeedFog : 0;
+	jump.staminaShown = labels.hasStamina;
+	jump.stamina = labels.hasStamina ? pd.prespeedStamina : 0.0;
+	jump.groundOffsetShown = labels.hasOffset;
+	jump.groundOffset = labels.hasOffset ? pd.jumpPos[2] - pd.jumpGroundZ : 0.0;
+	
+	// the same rows as PrintStrafeStats
+	DistbugStrafes strafes;
+	for (int strafe; strafe <= pd.strafeCount && strafe < MAX_STRAFES; strafe++)
+	{
+		strafes.sync[strafe] = pd.strafeSync[strafe];
+		strafes.gain[strafe] = pd.strafeGain[strafe];
+		strafes.loss[strafe] = pd.strafeLoss[strafe];
+		strafes.max[strafe] = pd.strafeMax[strafe];
+		strafes.airtime[strafe] = pd.strafeAirtime[strafe];
+		strafes.overlap[strafe] = pd.strafeOverlap[strafe];
+		strafes.deadair[strafe] = pd.strafeDeadair[strafe];
+		strafes.avgGain[strafe] = pd.strafeAvgGain[strafe];
+		strafes.avgEfficiency[strafe] = pd.strafeAvgEfficiency[strafe];
+		strafes.maxEfficiency[strafe] = pd.strafeMaxEfficiency[strafe];
+		strafes.count++;
+	}
+	
+	Call_StartForward(g_onJumpLanded);
+	Call_PushCell(client);
+	Call_PushArray(jump, sizeof(jump));
+	Call_PushArray(strafes, sizeof(strafes));
+	Call_Finish();
 }
 
 void PrintChatStats(int client, PlayerData pd, JumpStatLabels labels)
