@@ -207,6 +207,15 @@ public void OnClientPutInServer(int client)
 	g_pd[client].tickCount = 0;
 }
 
+public void OnClientDisconnect(int client)
+{
+	// the next player in this slot must not inherit anything
+	static PlayerData emptyPD;
+	g_pd[client] = emptyPD;
+	g_failstatPD[client] = emptyPD;
+	OnClientDisconnect_Clientprefs(client);
+}
+
 public void OnClientCookiesCached(int client)
 {
 	OnClientCookiesCached_Clientprefs(client);
