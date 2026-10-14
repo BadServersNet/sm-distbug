@@ -15,6 +15,8 @@ Download the latest release archive and extract it into the game server's `csgo`
 
 SourceMod creates `cfg/sourcemod/distbugfix.cfg` after the plugin first loads. Use that file to adjust the supported distance ranges for each jump type.
 
+Distbug prints stats cut off at the decimals it shows, so an edge of 1.239965 prints as `1.2399`. Set `distbug_round_output 1` to print them rounded instead, as the BadServers GOKZ fork stores them (`1.2400`). SourceMod doesn't add new cvars to an existing `distbugfix.cfg`, so add the line to that file or to `server.cfg` yourself.
+
 ## Commands
 
 | Command | Description |

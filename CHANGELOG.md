@@ -1,4 +1,12 @@
 
+**v2.2.0 Changelog**
+
+13.10.2026
+
+- Added the `distbug_round_output` cvar, default `0`. Set to `1`, Distbug prints every float stat rounded to the decimals it shows instead of cut off, matching the values the BadServers GOKZ fork stores: an edge of 1.239965 prints as `1.2400` instead of `1.2399`. This covers the chat line, the console stats and the strafe table, failstats included.
+- With `distbug_round_output 0`, output is unchanged.
+- SourceMod doesn't add new cvars to an existing `cfg/sourcemod/distbugfix.cfg`. To turn rounding on, add `distbug_round_output 1` to that file or to `server.cfg`.
+
 **v2.1.0 Changelog**
 
 13.10.2026

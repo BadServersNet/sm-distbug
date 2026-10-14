@@ -124,6 +124,7 @@ ConVar g_gravity;
 ConVar g_maxvelocity;
 
 ConVar g_jumpRange[JumpType][2];
+ConVar g_roundOutput;
 
 #include "distbugfix/clientprefs.sp"
 
@@ -177,6 +178,8 @@ public void OnPluginStart()
 	
 	g_jumpRange[JUMPTYPE_CBH][0] = CreateConVar("distbug_cbh_min_dist", "200.0");
 	g_jumpRange[JUMPTYPE_CBH][1] = CreateConVar("distbug_cbh_max_dist", "390.0");
+	
+	g_roundOutput = CreateConVar("distbug_round_output", "0", "Print stats rounded to their decimals instead of cut off, as GOKZ stores them.", _, true, 0.0, true, 1.0);
 	
 	AutoExecConfig(.name = DISTBUG_CONFIG_NAME);
 	
@@ -1257,8 +1260,8 @@ void BuildJumpStatLabels(PlayerData pd, JumpStatLabels labels)
 
 	if (pd.jumpEdge >= 0.0 && pd.jumpEdge < MAX_EDGE)
 	{
-		FormatEx(labels.edge, sizeof(labels.edge), "Edge: %.4f", pd.jumpEdge);
-		FormatEx(labels.chatEdge, sizeof(labels.chatEdge), "Edge: {l}%.2f{g}", pd.jumpEdge);
+		FormatEx(labels.edge, sizeof(labels.edge), "Edge: %s", FormatStat(pd.jumpEdge, 4));
+		FormatEx(labels.chatEdge, sizeof(labels.chatEdge), "Edge: {l}%s{g}", FormatStat(pd.jumpEdge, 2));
 		labels.hasEdge = true;
 	}
 	
@@ -1273,7 +1276,7 @@ void BuildJumpStatLabels(PlayerData pd, JumpStatLabels labels)
 	
 	if (FloatAbs(pd.jumpLandEdge) < MAX_EDGE)
 	{
-		FormatEx(labels.landEdge, sizeof(labels.landEdge), "Land Edge: %.4f", pd.jumpLandEdge);
+		FormatEx(labels.landEdge, sizeof(labels.landEdge), "Land Edge: %s", FormatStat(pd.jumpLandEdge, 4));
 		labels.hasLandEdge = true;
 	}
 	
@@ -1285,13 +1288,13 @@ void BuildJumpStatLabels(PlayerData pd, JumpStatLabels labels)
 	
 	if (pd.prespeedStamina != 0.0)
 	{
-		FormatEx(labels.stamina, sizeof(labels.stamina), "Stamina: %.1f", pd.prespeedStamina);
+		FormatEx(labels.stamina, sizeof(labels.stamina), "Stamina: %s", FormatStat(pd.prespeedStamina, 1));
 		labels.hasStamina = true;
 	}
 	
 	if (pd.jumpGroundZ != pd.jumpPos[2])
 	{
-		FormatEx(labels.offset, sizeof(labels.offset), "Ground offset: %.4f", pd.jumpPos[2] - pd.jumpGroundZ);
+		FormatEx(labels.offset, sizeof(labels.offset), "Ground offset: %s", FormatStat(pd.jumpPos[2] - pd.jumpGroundZ, 4));
 		labels.hasOffset = true;
 	}
 	
@@ -1321,6 +1324,37 @@ void FormatForwardRelease(int release, char[] output, int length)
 bool IsForwardReleaseShown(int release)
 {
 	return GCIntAbs(release) <= DISTBUG_MAX_FWD_RELEASE;
+}
+
+// prints a stat as "%<width>.<decimals>f" does, but rounded when distbug_round_output is on
+char[] FormatStat(float value, int decimals, int width = 0)
+{
+	char text[64];
+	if (!g_roundOutput.BoolValue || !IsStatRoundable(value))
+	{
+		char format[16];
+		if (width)
+		{
+			FormatEx(format, sizeof(format), "%%%i.%if", width, decimals);
+		}
+		else
+		{
+			FormatEx(format, sizeof(format), "%%.%if", decimals);
+		}
+		FormatEx(text, sizeof(text), format, value);
+		return text;
+	}
+	
+	char rounded[16];
+	rounded = FormatScaledStat(ScaleStat(value, ROUNDED_STAT_DECIMALS), ROUNDED_STAT_PRECISION, decimals);
+	// pad on the left like %<width>f, %<width>s pads on the right
+	int padding = GCIntMax(width - strlen(rounded), 0);
+	for (int i; i < padding; i++)
+	{
+		text[i] = ' ';
+	}
+	strcopy(text[padding], sizeof(text) - padding, rounded);
+	return text;
 }
 
 void CallOnJumpLanded(int client, PlayerData pd)
@@ -1395,38 +1429,38 @@ void PrintChatStats(int client, PlayerData pd, JumpStatLabels labels)
 	char chatStats[1024];
 	if (!IsSettingEnabled(client, SETTINGS_ADV_CHAT_STATS))
 	{
-		FormatEx(chatStats, sizeof(chatStats), CHAT_PREFIX..." {g}%s%s: {l}%.3f {d}[{g}%s%sVeer: {l}%.1f"...CHAT_SPACER...\
-													"%s"...CHAT_SPACER..."Sync: {l}%.0f"...CHAT_SPACER..."Max: {l}%.0f{d}]",
+		FormatEx(chatStats, sizeof(chatStats), CHAT_PREFIX..." {g}%s%s: {l}%s {d}[{g}%s%sVeer: {l}%s"...CHAT_SPACER...\
+													"%s"...CHAT_SPACER..."Sync: {l}%s"...CHAT_SPACER..."Max: {l}%s{d}]",
 			pd.failedJump ? "F " : "",
 			g_jumpTypes[pd.jumpType],
-			pd.jumpDistance,
+			FormatStat(pd.jumpDistance, 3),
 			
 			labels.chatEdge,
 			labels.hasEdge ? CHAT_SPACER : "",
-			pd.jumpVeer,
+			FormatStat(pd.jumpVeer, 1),
 			labels.fwdRelease,
-			pd.jumpSync,
-			pd.jumpMaxspeed
+			FormatStat(pd.jumpSync, 0),
+			FormatStat(pd.jumpMaxspeed, 0)
 		);
 	}
 	else
 	{
-		FormatEx(chatStats, sizeof(chatStats), CHAT_PREFIX..." {g}%s%s: {l}%.4f {d}[{g}%s%s%s%sPre: {l}%.2f"...CHAT_SPACER..."Airpath: {l}%.3f"...CHAT_SPACER...\
-												"Max: {l}%.1f"...CHAT_SPACER..."Veer: {l}%.1f"...CHAT_SPACER..."Sync: {l}%.0f"...CHAT_SPACER...\
+		FormatEx(chatStats, sizeof(chatStats), CHAT_PREFIX..." {g}%s%s: {l}%s {d}[{g}%s%s%s%sPre: {l}%s"...CHAT_SPACER..."Airpath: {l}%s"...CHAT_SPACER...\
+												"Max: {l}%s"...CHAT_SPACER..."Veer: {l}%s"...CHAT_SPACER..."Sync: {l}%s"...CHAT_SPACER...\
 												"%s{l}%i"...CHAT_SPACER..."%s"...CHAT_SPACER..."OL/DA: {l}%i{g}/{l}%i{d}]",
 			pd.failedJump ? "F " : "",
 			g_jumpTypes[pd.jumpType],
-			pd.jumpDistance,
+			FormatStat(pd.jumpDistance, 4),
 			
 			labels.chatEdge,
 			labels.hasBlock ? " " : "",
 			labels.chatBlock,
 			labels.hasEdge ? CHAT_SPACER : "",
-			pd.jumpPrespeed,
-			pd.jumpAirpath,
-			pd.jumpMaxspeed,
-			pd.jumpVeer,
-			pd.jumpSync,
+			FormatStat(pd.jumpPrespeed, 2),
+			FormatStat(pd.jumpAirpath, 3),
+			FormatStat(pd.jumpMaxspeed, 1),
+			FormatStat(pd.jumpVeer, 1),
+			FormatStat(pd.jumpSync, 0),
 			pd.jumpType != JUMPTYPE_LAJ ? "Jump Ang: " : "Air: ",
 			pd.jumpType != JUMPTYPE_LAJ ? RoundFloat(pd.jumpJumpoffAngle) : pd.jumpAirtime,
 			labels.fwdRelease,
@@ -1442,35 +1476,35 @@ void PrintChatStats(int client, PlayerData pd, JumpStatLabels labels)
 void PrintConsoleStats(int client, PlayerData pd, JumpStatLabels labels)
 {
 	char consoleStats[1024];
-	FormatEx(consoleStats, sizeof(consoleStats), "\n"...CONSOLE_PREFIX..." %s%s: %.5f [%s%s%s%sVeer: %.4f | %s | Sync: %.2f | Max: %.3f]\n"...\
-												   "[%s%sPre: %.4f | OL/DA: %i/%i | Jumpoff Angle: %.3f | Airpath: %.4f]\n"...\
-												   "[Strafes: %i | Airtime: %i | Jump Direction: %s | %s%sHeight: %.4f%s%s%s%s]",
+	FormatEx(consoleStats, sizeof(consoleStats), "\n"...CONSOLE_PREFIX..." %s%s: %s [%s%s%s%sVeer: %s | %s | Sync: %s | Max: %s]\n"...\
+												   "[%s%sPre: %s | OL/DA: %i/%i | Jumpoff Angle: %s | Airpath: %s]\n"...\
+												   "[Strafes: %i | Airtime: %i | Jump Direction: %s | %s%sHeight: %s%s%s%s%s]",
 		pd.failedJump ? "FAILED " : "",
 		g_jumpTypes[pd.jumpType],
-		pd.jumpDistance,
+		FormatStat(pd.jumpDistance, 5),
 		labels.block,
 		labels.hasBlock ? " | " : "",
 		labels.edge,
 		labels.hasEdge ? " | " : "",
-		pd.jumpVeer,
+		FormatStat(pd.jumpVeer, 4),
 		labels.fwdRelease,
-		pd.jumpSync,
-		pd.jumpMaxspeed,
+		FormatStat(pd.jumpSync, 2),
+		FormatStat(pd.jumpMaxspeed, 3),
 		
 		labels.landEdge,
 		labels.hasLandEdge ? " | " : "",
-		pd.jumpPrespeed,
+		FormatStat(pd.jumpPrespeed, 4),
 		pd.jumpOverlap,
 		pd.jumpDeadair,
-		pd.jumpJumpoffAngle,
-		pd.jumpAirpath,
+		FormatStat(pd.jumpJumpoffAngle, 3),
+		FormatStat(pd.jumpAirpath, 4),
 		
 		pd.strafeCount + 1,
 		pd.jumpAirtime,
 		g_jumpDirString[pd.jumpDir],
 		labels.fog,
 		labels.hasFOG ? " | " : "",
-		pd.jumpHeight,
+		FormatStat(pd.jumpHeight, 4),
 		labels.hasOffset ? " | " : "",
 		labels.offset,
 		labels.hasStamina ? " | " : "",
@@ -1573,16 +1607,16 @@ void PrintStrafeStats(int client, PlayerData pd)
 		ClientAndSpecsPrintConsole(client, " #.  Sync    Gain   Loss   Max  Air  OL  DA  AvgGain  Avg efficiency, (max efficiency)");
 		for (int strafe; strafe <= pd.strafeCount && strafe < MAX_STRAFES; strafe++)
 		{
-			ClientAndSpecsPrintConsole(client, "%2i. %5.1f%% %6.2f %6.2f  %5.1f %3i %3i %3i  %3.2f     %3i%% (%3i%%)",
+			ClientAndSpecsPrintConsole(client, "%2i. %s%% %s %s  %s %3i %3i %3i  %s     %3i%% (%3i%%)",
 				strafe + 1,
-				pd.strafeSync[strafe],
-				pd.strafeGain[strafe],
-				pd.strafeLoss[strafe],
-				pd.strafeMax[strafe],
+				FormatStat(pd.strafeSync[strafe], 1, 5),
+				FormatStat(pd.strafeGain[strafe], 2, 6),
+				FormatStat(pd.strafeLoss[strafe], 2, 6),
+				FormatStat(pd.strafeMax[strafe], 1, 5),
 				pd.strafeAirtime[strafe],
 				pd.strafeOverlap[strafe],
 				pd.strafeDeadair[strafe],
-				pd.strafeAvgGain[strafe],
+				FormatStat(pd.strafeAvgGain[strafe], 2, 3),
 				RoundFloat(pd.strafeAvgEfficiency[strafe]),
 				RoundFloat(pd.strafeMaxEfficiency[strafe])
 			);
