@@ -20,6 +20,12 @@ void OnClientCookiesCached_Clientprefs(int client)
 	settings[client] = StringToInt(buffer);
 }
 
+void OnClientDisconnect_Clientprefs(int client)
+{
+	// not saved: the cookie keeps what the player set
+	settings[client] = 0;
+}
+
 void SaveClientCookies(int client)
 {
 	if (!GCIsValidClient(client) || !AreClientCookiesCached(client))
