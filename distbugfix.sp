@@ -257,6 +257,8 @@ public Action Command_Distbugversion(int client, int args)
 public Action Command_Distbug(int client, int args)
 {
 	ToggleSetting(client, SETTINGS_DISTBUG_ENABLED);
+	// a jump in progress would have ticks missing, so drop it
+	ResetJump(g_pd[client]);
 	CPrintToChat(client, "%s Distbug has been %s", CHAT_PREFIX,
 		IsSettingEnabled(client, SETTINGS_DISTBUG_ENABLED) ? "enabled." : "disabled.");
 	

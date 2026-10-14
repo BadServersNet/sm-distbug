@@ -45,6 +45,7 @@ The forward is not called for:
 - failstats.
 - jumps outside the distance range for their type.
 - jumps interrupted by a teleport.
+- a jump the player toggled `sm_distbug` during.
 
 `jump.cmdTick` is the `tickcount` that `OnPlayerRunCmd` received for the command the player landed in. MovementAPI takes its landing tick from the same argument. `jump.serverTick` is `GetGameTickCount()` at the landing. They count different things, so compare each only with its own kind.
 
