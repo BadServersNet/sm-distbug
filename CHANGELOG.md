@@ -1,4 +1,12 @@
 
+**v2.1.0 Changelog**
+
+13.10.2026
+
+- Added the `Distbug_OnJumpLanded` forward, which gives other plugins a landed jump's stats and strafe table as they are printed to the console.
+- Registered the plugin library as `distbugfix`.
+- Console, chat, HUD and beam output is unchanged.
+
 **v2.0.0 Changelog**
 
 26.10.2022

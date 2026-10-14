@@ -29,6 +29,29 @@ SourceMod creates `cfg/sourcemod/distbugfix.cfg` after the plugin first loads. U
 | `sm_distbugadvchat` | Toggle advanced chat statistics. |
 | `sm_distbughelp` | Print the command list to the console. |
 
+## For plugin developers
+
+Distbug registers the library `distbugfix` and calls one forward, declared in `include/distbugfix.inc`:
+
+```sourcepawn
+forward void Distbug_OnJumpLanded(int client, DistbugJump jump, DistbugStrafes strafes);
+```
+
+It is called once for each jump that Distbug prints as landed, after the output has been sent. `DistbugJump` holds the three console lines and `DistbugStrafes` holds the strafe table. The values aren't rounded, and the include gives the console format of each one. A stat that Distbug left out of its output, such as an edge of 32 or more, arrives with its `Shown` flag set to false.
+
+The forward is not called for:
+
+- players who have Distbug off. It is off until a player runs `sm_distbug`, and their jumps aren't tracked. The other toggles (strafe stats, graphs, beams, advanced chat) don't affect the forward.
+- failstats.
+- jumps outside the distance range for their type.
+- jumps interrupted by a teleport.
+
+`jump.cmdTick` is the `tickcount` that `OnPlayerRunCmd` received for the command the player landed in. MovementAPI takes its landing tick from the same argument. `jump.serverTick` is `GetGameTickCount()` at the landing. They count different things, so compare each only with its own kind.
+
+A plugin that only listens needs nothing to keep Distbug optional: it includes `distbugfix.inc` and declares the forward's function, which is never called while Distbug is unloaded. Use `LibraryExists(DISTBUG_LIBRARY)` to find out whether it is loaded.
+
+`test/distbugfix_listener.sp` prints the forward's payload to the jumper's console in Distbug's layout, to compare the two by eye. It isn't part of the release archive. Compile it the same way as the plugin.
+
 ## Building
 
 Compile `distbugfix.sp` with SourceMod 1.11 and add `include` to the compiler's include search path. All non-SourceMod includes required to build the plugin are bundled in this repository.
