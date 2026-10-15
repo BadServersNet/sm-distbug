@@ -51,6 +51,8 @@ The forward is not called for:
 - jumps interrupted by a teleport.
 - a jump the player toggled `sm_distbug` during.
 
+`jump.graph` holds the strafe graph Distbug prints under "Strafe keys", one `DistbugStrafeType` per airborne tick, `jump.graphLength` entries long. The length is `jump.airtime`, unless the jump was airborne for more than `DISTBUG_MAX_GRAPH_TICKS` (150) ticks, where Distbug's graph stops too. Left and right are the sides Distbug prints for the jump's `jumpDir`, not raw A and D: on a backwards jump left is D, and a sideways jump's rows are W and S, in the order the include gives for each `jumpDir`. The include also lists the symbol each value prints as.
+
 `jump.cmdTick` is the `tickcount` that `OnPlayerRunCmd` received for the command the player landed in. MovementAPI takes its landing tick from the same argument. `jump.serverTick` is `GetGameTickCount()` at the landing. They count different things, so compare each only with its own kind.
 
 A plugin that only listens needs nothing to keep Distbug optional: it includes `distbugfix.inc` and declares the forward's function, which is never called while Distbug is unloaded. Use `LibraryExists(DISTBUG_LIBRARY)` to find out whether it is loaded.

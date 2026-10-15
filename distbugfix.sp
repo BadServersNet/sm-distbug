@@ -1399,7 +1399,14 @@ void CallOnJumpLanded(int client, PlayerData pd)
 	jump.stamina = labels.hasStamina ? pd.prespeedStamina : 0.0;
 	jump.groundOffsetShown = labels.hasOffset;
 	jump.groundOffset = labels.hasOffset ? pd.jumpPos[2] - pd.jumpGroundZ : 0.0;
-	
+
+	// the same ticks as BuildStrafeGraph
+	jump.graphLength = GCIntMin(pd.jumpAirtime, MAX_JUMP_FRAMES);
+	for (int i; i < jump.graphLength; i++)
+	{
+		jump.graph[i] = pd.strafeGraph[i];
+	}
+
 	// the same rows as PrintStrafeStats
 	DistbugStrafes strafes;
 	for (int strafe; strafe <= pd.strafeCount && strafe < MAX_STRAFES; strafe++)

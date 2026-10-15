@@ -1,3 +1,11 @@
+**v2.3.0 Changelog**
+
+15.10.2026
+
+- `Distbug_OnJumpLanded` now carries the landed jump's strafe graph, the `█ $ # H .` rows printed under "Strafe keys", as `graph` and `graphLength` at the end of `DistbugJump`. The tick types are the new `DistbugStrafeType` enum in `include/distbugfix.inc`.
+- Listeners built against the 2.2.0 include keep working.
+- Console, chat, panel and beam output is unchanged.
+
 
 **v2.2.0 Changelog**
 
