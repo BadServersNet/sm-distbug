@@ -12,7 +12,7 @@
 
 #define MAX_STRAFES     DISTBUG_MAX_STRAFES
 #define MAX_EDGE        32.0
-#define MAX_JUMP_FRAMES	150 // for frame based arrays
+#define MAX_JUMP_FRAMES	DISTBUG_MAX_GRAPH_TICKS // for frame based arrays
 #define MAX_BHOP_FRAMES	8
 
 #define MAX_COOKIE_SIZE 32
@@ -33,19 +33,16 @@ enum
 	SETTINGS_ADV_CHAT_STATS       = (1 << 6),
 }
 
-enum StrafeType
-{
-	STRAFETYPE_OVERLAP,         // IN_MOVELEFT and IN_MOVERIGHT are overlapping and sidespeed is 0
-	STRAFETYPE_NONE,            // IN_MOVELEFT and IN_MOVERIGHT are both not pressed and sidespeed is 0
-	
-	STRAFETYPE_LEFT,            // only IN_MOVELEFT is down and sidespeed isn't 0.
-	STRAFETYPE_OVERLAP_LEFT,    // IN_MOVELEFT and IN_MOVERIGHT are overlapping, but sidespeed is smaller than 0 (not 0)
-	STRAFETYPE_NONE_LEFT,       // IN_MOVELEFT and IN_MOVERIGHT are both not pressed and sidespeed is smaller than 0 (not 0)
-	
-	STRAFETYPE_RIGHT,           // only IN_MOVERIGHT is down and sidespeed isn't 0.
-	STRAFETYPE_OVERLAP_RIGHT,   // IN_MOVELEFT and IN_MOVERIGHT are overlapping, but sidespeed is bigger than 0 (not 0)
-	STRAFETYPE_NONE_RIGHT,      // IN_MOVELEFT and IN_MOVERIGHT are both not pressed and sidespeed is bigger than 0 (not 0)
-};
+// the public enum, under the names the plugin uses
+#define StrafeType                DistbugStrafeType
+#define STRAFETYPE_OVERLAP        DISTBUG_STRAFETYPE_OVERLAP
+#define STRAFETYPE_NONE           DISTBUG_STRAFETYPE_NONE
+#define STRAFETYPE_LEFT           DISTBUG_STRAFETYPE_LEFT
+#define STRAFETYPE_OVERLAP_LEFT   DISTBUG_STRAFETYPE_OVERLAP_LEFT
+#define STRAFETYPE_NONE_LEFT      DISTBUG_STRAFETYPE_NONE_LEFT
+#define STRAFETYPE_RIGHT          DISTBUG_STRAFETYPE_RIGHT
+#define STRAFETYPE_OVERLAP_RIGHT  DISTBUG_STRAFETYPE_OVERLAP_RIGHT
+#define STRAFETYPE_NONE_RIGHT     DISTBUG_STRAFETYPE_NONE_RIGHT
 
 enum JumpBeamColour
 {

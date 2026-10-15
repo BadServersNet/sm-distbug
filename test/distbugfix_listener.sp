@@ -23,6 +23,20 @@ char g_jumpDirString[JumpDir][] = {
 	"Sideways"
 };
 
+// distbug's g_szStrafeType
+char g_strafeTypeSymbols[DistbugStrafeType][] = {
+	"$", // DISTBUG_STRAFETYPE_OVERLAP
+	".", // DISTBUG_STRAFETYPE_NONE
+	
+	"█", // DISTBUG_STRAFETYPE_LEFT
+	"#", // DISTBUG_STRAFETYPE_OVERLAP_LEFT
+	"H", // DISTBUG_STRAFETYPE_NONE_LEFT
+	
+	"█", // DISTBUG_STRAFETYPE_RIGHT
+	"#", // DISTBUG_STRAFETYPE_OVERLAP_RIGHT
+	"H", // DISTBUG_STRAFETYPE_NONE_RIGHT
+};
+
 public Plugin myinfo =
 {
 	name = "Distbug forward listener",
@@ -130,5 +144,45 @@ public void Distbug_OnJumpLanded(int client, DistbugJump jump, DistbugStrafes st
 			RoundFloat(strafes.avgEfficiency[strafe]),
 			RoundFloat(strafes.maxEfficiency[strafe])
 		);
+	}
+	
+	char graphLeft[DISTBUG_MAX_GRAPH_TICKS * 3 + 1];
+	char graphRight[DISTBUG_MAX_GRAPH_TICKS * 3 + 1];
+	BuildStrafeGraph(jump, true, graphLeft, sizeof(graphLeft));
+	BuildStrafeGraph(jump, false, graphRight, sizeof(graphRight));
+	PrintToConsole(client, "\n[LISTENER] Strafe keys:\nL: %s\nR: %s", graphLeft, graphRight);
+	
+	int expectedLength = jump.airtime < DISTBUG_MAX_GRAPH_TICKS ? jump.airtime : DISTBUG_MAX_GRAPH_TICKS;
+	if (jump.graphLength != expectedLength)
+	{
+		PrintToConsole(client, "[LISTENER] graph length %i doesn't match airtime %i capped at %i", jump.graphLength, jump.airtime, DISTBUG_MAX_GRAPH_TICKS);
+	}
+}
+
+// distbug's GetDirectionalStrafeType
+DistbugStrafeType GetDirectionalStrafeType(DistbugStrafeType type, bool left)
+{
+	if (left)
+	{
+		if (type == DISTBUG_STRAFETYPE_RIGHT || type == DISTBUG_STRAFETYPE_NONE_RIGHT || type == DISTBUG_STRAFETYPE_OVERLAP_RIGHT)
+		{
+			return DISTBUG_STRAFETYPE_NONE;
+		}
+		return type;
+	}
+	if (type == DISTBUG_STRAFETYPE_LEFT || type == DISTBUG_STRAFETYPE_NONE_LEFT || type == DISTBUG_STRAFETYPE_OVERLAP_LEFT)
+	{
+		return DISTBUG_STRAFETYPE_NONE;
+	}
+	return type;
+}
+
+// the console row of distbug's BuildStrafeGraph
+void BuildStrafeGraph(DistbugJump jump, bool left, char[] output, int length)
+{
+	int index;
+	for (int i; i < jump.graphLength && i < DISTBUG_MAX_GRAPH_TICKS; i++)
+	{
+		index += strcopy(output[index], length - index, g_strafeTypeSymbols[GetDirectionalStrafeType(jump.graph[i], left)]);
 	}
 }

@@ -4,13 +4,14 @@
 #endif
 #define _distbug_included
 
-#define DISTBUG_VERSION "2.2.0"
+#define DISTBUG_VERSION "2.3.0"
 
 // library name, for LibraryExists and OnLibraryAdded
 #define DISTBUG_LIBRARY "distbugfix"
 
 #define DISTBUG_MAX_STRAFES     32
 #define DISTBUG_MAX_FWD_RELEASE 16 // further than this either way is printed as "Fwd: No"
+#define DISTBUG_MAX_GRAPH_TICKS 150 // the strafe graph stops after this many airborne ticks. never changes
 
 enum JumpType
 {
@@ -30,6 +31,32 @@ enum JumpDir
 	JUMPDIR_BACKWARDS, // printed as "Backwards"
 	JUMPDIR_LEFT,      // printed as "Sideways"
 	JUMPDIR_RIGHT,     // printed as "Sideways"
+};
+
+/**
+ * One tick of the strafe graph, with the symbol Distbug prints for it.
+ *
+ * Left and right are the sides of the jump's jumpDir, the sides the graph
+ * prints, not raw A and D. They are the player's left and right while facing
+ * the way they travel: on a backwards jump left is D and right is A, on a
+ * JUMPDIR_LEFT jump left is S and right is W, and on a JUMPDIR_RIGHT jump left
+ * is W and right is S. The sidespeed below is the wishspeed along those sides.
+ *
+ * A type on one side prints on that side's row and as "." on the other.
+ * DISTBUG_STRAFETYPE_OVERLAP and DISTBUG_STRAFETYPE_NONE print on both rows.
+ */
+enum DistbugStrafeType
+{
+	DISTBUG_STRAFETYPE_OVERLAP,        // "$": both strafe keys down and sidespeed is 0
+	DISTBUG_STRAFETYPE_NONE,           // ".": neither key down and sidespeed is 0, or one key down without sidespeed its way
+	
+	DISTBUG_STRAFETYPE_LEFT,           // "█": only the left key down and sidespeed is to the left
+	DISTBUG_STRAFETYPE_OVERLAP_LEFT,   // "#": both keys down, but sidespeed is to the left
+	DISTBUG_STRAFETYPE_NONE_LEFT,      // "H": neither key down, but sidespeed is to the left
+	
+	DISTBUG_STRAFETYPE_RIGHT,          // "█": only the right key down and sidespeed is to the right
+	DISTBUG_STRAFETYPE_OVERLAP_RIGHT,  // "#": both keys down, but sidespeed is to the right
+	DISTBUG_STRAFETYPE_NONE_RIGHT,     // "H": neither key down, but sidespeed is to the right
 };
 
 /**
@@ -77,6 +104,8 @@ enum struct DistbugJump
 	float stamina;          // %.1f
 	bool groundOffsetShown;
 	float groundOffset;     // %.4f
+	int graphLength;        // ticks in graph: airtime, capped at DISTBUG_MAX_GRAPH_TICKS
+	DistbugStrafeType graph[DISTBUG_MAX_GRAPH_TICKS]; // one per airborne tick, the first is airtime 1. only indexes below graphLength are set
 }
 
 /**
